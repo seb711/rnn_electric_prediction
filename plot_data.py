@@ -15,7 +15,8 @@ from lstm_model import LSTMModel
 from gru_model import GRUModel
 import torch.optim as optim
 from optimization_train_step import Optimization
-
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from visualize_predicitons import plot_predictions
 
 input_dim = 100
 batch_size = 64
@@ -93,6 +94,27 @@ def get_model(model, model_params):
     }
     return models.get(model.lower())(**model_params)
 
+
+# EVAULATION
+def inverse_transform(scaler, df, columns):
+    for col in columns:
+        df[col] = scaler.inverse_transform(df[col])
+    return df
+
+
+def format_predictions(predictions, values, df_test, scaler):
+    vals = np.concatenate(values, axis=0).ravel()
+    preds = np.concatenate(predictions, axis=0).ravel()
+    df_result = pd.DataFrame(data={"value": vals, "prediction": preds}, index=df_test.head(len(vals)).index)
+    df_result = df_result.sort_index()
+    df_result = inverse_transform(scaler, df_result, [["value", "prediction"]])
+    return df_result
+
+def calculate_metrics(df):
+    return {'mae' : mean_absolute_error(df.value, df.prediction),
+            'rmse' : mean_squared_error(df.value, df.prediction) ** 0.5,
+            'r2' : r2_score(df.value, df.prediction)}
+
 df = pd.read_csv('./PJME_hourly.csv')
 
 df = df.set_index(['Datetime'])
@@ -169,7 +191,7 @@ hidden_dim = 64
 layer_dim = 3
 batch_size = 64
 dropout = 0.2
-n_epochs = 10
+n_epochs = 40
 learning_rate = 1e-3
 weight_decay = 1e-6
 
@@ -189,3 +211,7 @@ opt.train(train_loader, val_loader, batch_size=batch_size, n_epochs=n_epochs, n_
 opt.plot_losses()
 
 predictions, values = opt.evaluate(test_loader_one, batch_size=1, n_features=input_dim)
+
+df_result = format_predictions(predictions, values, X_test, scaler)
+result_metrics = calculate_metrics(df_result)
+plot_predictions(df_result, df)

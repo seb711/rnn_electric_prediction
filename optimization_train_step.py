@@ -63,7 +63,7 @@ class Optimization:
                     f"[{epoch}/{n_epochs}] Training loss: {training_loss:.4f}\t Validation loss: {validation_loss:.4f}"
                 )
 
-        torch.save(self.model.state_dict(), model_path)
+        # torch.save(self.model.state_dict(), model_path)
 
     def evaluate(self, test_loader, batch_size=1, n_features=1):
         with torch.no_grad():
